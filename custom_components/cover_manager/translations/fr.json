@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cover_Manager",
+        "data": {
+          "name": "Nom du groupe",
+          "covers": "Volets à piloter"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cover_Manager",
+        "data": {
+          "covers": "Volets à piloter",
+          "open_time": "Heure d'ouverture",
+          "close_time": "Heure de fermeture",
+          "open_time_weekend": "Ouverture (week-end, optionnel)",
+          "close_time_weekend": "Fermeture (week-end, optionnel)",
+          "lux_sensor": "Capteur de luminosité extérieure",
+          "lux_open": "Seuil d'ouverture (lux)",
+          "lux_close": "Seuil de fermeture (lux)",
+          "lux_delay": "Délai de confirmation (minutes)",
+          "temp_sensor": "Capteur de température extérieure",
+          "heat_threshold": "Seuil de chaleur (°C)",
+          "heat_position": "Position en cas de chaleur (% ouvert)",
+          "azimuth_min": "Azimut solaire min de la façade",
+          "azimuth_max": "Azimut solaire max de la façade",
+          "min_elevation": "Élévation solaire minimale",
+          "window_sensors": "Capteurs d'ouverture (bloquent la fermeture)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {}
+  }
+}

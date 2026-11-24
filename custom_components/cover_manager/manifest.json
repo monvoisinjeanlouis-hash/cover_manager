@@ -1,0 +1,13 @@
+{
+  "domain": "volets_manager",
+  "name": "Cover_Manager",
+  "version": "0.1.0",
+  "documentation": "https://github.com/ton-compte/volets_manager",
+  "issue_tracker": "https://github.com/ton-compte/volets_manager/issues",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "after_dependencies": ["sun"],
+  "iot_class": "calculated",
+  "requirements": []
+}

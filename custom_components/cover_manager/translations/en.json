@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Cover_Manager",
+        "data": {
+          "name": "Group name",
+          "covers": "Covers"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Cover_Manager",
+        "data": {
+          "covers": "Covers",
+          "open_time": "Opening time",
+          "close_time": "Closing time",
+          "open_time_weekend": "Opening time (weekend, optional)",
+          "close_time_weekend": "Closing time (weekend, optional)",
+          "lux_sensor": "Outdoor illuminance sensor",
+          "lux_open": "Open threshold (lux)",
+          "lux_close": "Close threshold (lux)",
+          "lux_delay": "Confirmation delay (minutes)",
+          "temp_sensor": "Outdoor temperature sensor",
+          "heat_threshold": "Heat threshold (°C)",
+          "heat_position": "Position when hot (% open)",
+          "azimuth_min": "Facade min sun azimuth",
+          "azimuth_max": "Facade max sun azimuth",
+          "min_elevation": "Minimum sun elevation",
+          "window_sensors": "Door/window sensors (block closing)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {}
+  }
+}
