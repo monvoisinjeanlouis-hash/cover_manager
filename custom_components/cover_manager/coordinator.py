@@ -225,8 +225,22 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
             if st is None or st.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
 
-            # Position inconnue : on déduit une approximation à partir de l'état ouvert/fermé.
             current = st.attributes.get("current_position")
+            # Ne pas considérer une position transitoire comme une cible atteinte.
+            if st.state not in ("opening", "closing") and (
+                current == target
+                or (
+                    current is None
+                    and (
+                        (target == 0 and st.state == "closed")
+                        or (target == 100 and st.state == "open")
+                    )
+                )
+            ):
+                self._applied[eid] = target
+                continue
+
+            # Position inconnue : approximation utilisée pour la sécurité.
             if current is None:
                 current = 0 if st.state == "closed" else 100
 

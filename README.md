@@ -64,7 +64,7 @@ L'intégration évalue les règles toutes les minutes et lors de tout changement
 - **Chaleur** : si la température dépasse le seuil, que le soleil éclaire la façade et que l'élévation est suffisante, les volets prennent la position de chaleur configurée.
 - **Pause** : aucun ordre n'est envoyé tant que l'interrupteur est désactivé.
 
-La position cible n'est envoyée que lorsqu'elle change par rapport à la dernière cible enregistrée pour chaque volet. Cela évite de rouvrir systématiquement un volet déplacé manuellement tant qu'une nouvelle règle ne doit pas être appliquée.
+La position cible n'est envoyée que lorsqu'elle change par rapport à la dernière cible enregistrée pour chaque volet et que le volet n'est pas déjà à cette position. Cela évite de rouvrir systématiquement un volet déplacé manuellement tant qu'une nouvelle règle ne doit pas être appliquée. Si le volet ne fournit pas sa position, son état `open` est considéré comme ouvert à 100 % et son état `closed` comme fermé à 0 % ; une position partielle ne peut pas être vérifiée.
 
 ## Entités créées
 
