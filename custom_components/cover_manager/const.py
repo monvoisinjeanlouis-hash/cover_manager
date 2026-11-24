@@ -1,6 +1,6 @@
 """Constantes de Cover_Manager."""
 
-DOMAIN = "volets_manager"
+DOMAIN = "cover_manager"
 
 CONF_COVERS = "covers"
 CONF_OPEN_TIME = "open_time"

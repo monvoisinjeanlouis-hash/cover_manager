@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from typing import TypeAlias, TypedDict
 
 from homeassistant.components.cover import CoverEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -18,13 +19,27 @@ from .const import DEFAULTS, DOMAIN, HEAT_HYSTERESIS
 _LOGGER = logging.getLogger(__name__)
 
 
-class VoletsCoordinator(DataUpdateCoordinator[dict]):
+class CoordinatorData(TypedDict):
+    """Computed target and diagnostic details shared with the entities."""
+
+    target: int | None
+    rule: str
+    reason: str
+    blocked_by: list[str]
+
+
+CoverManagerConfigEntry: TypeAlias = ConfigEntry["CoverManagerCoordinator"]
+
+
+class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
     """Évalue les règles chaque minute et à chaque changement de capteur."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: CoverManagerConfigEntry) -> None:
         super().__init__(
             hass, _LOGGER, name=f"{DOMAIN}_{entry.entry_id}",
-            update_interval=timedelta(minutes=1), config_entry=entry,
+            update_interval=timedelta(minutes=1),
+            config_entry=entry,
+            always_update=False,
         )
         self.entry = entry
         self.enabled = True
@@ -185,7 +200,7 @@ class VoletsCoordinator(DataUpdateCoordinator[dict]):
         return 100, RULE_DAY, reason
 
     # ----------------------------------------------------------- action
-    async def _async_update_data(self) -> dict:
+    async def _async_update_data(self) -> CoordinatorData:
         """Exécute une évaluation complète puis retourne son résultat au sensor."""
         # Retourner None comme cible conserve les volets dans leur position actuelle.
         if not self.enabled:

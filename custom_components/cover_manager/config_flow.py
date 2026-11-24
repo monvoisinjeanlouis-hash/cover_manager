@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, OptionsFlow
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
@@ -64,7 +65,7 @@ def _options_schema(o: dict) -> vol.Schema:
     )
 
 
-class VoletsConfigFlow(ConfigFlow, domain=DOMAIN):
+class CoverManagerConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
@@ -83,11 +84,12 @@ class VoletsConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=schema)
 
     @staticmethod
-    def async_get_options_flow(config_entry):
-        return VoletsOptionsFlow()
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> CoverManagerOptionsFlow:
+        return CoverManagerOptionsFlow()
 
 
-class VoletsOptionsFlow(OptionsFlow):
+class CoverManagerOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input=None):
         if user_input is not None:
             return self.async_create_entry(data=user_input)

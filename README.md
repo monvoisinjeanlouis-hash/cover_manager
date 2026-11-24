@@ -24,8 +24,10 @@ Cover_Manager est une intégration personnalisée [Home Assistant](https://www.h
 
 ### Installation manuelle
 
-1. Copiez le dossier `custom_components/volets_manager` dans le dossier `custom_components` de votre configuration Home Assistant.
+1. Copiez `custom_components/cover_manager` dans le dossier `custom_components` de votre configuration Home Assistant.
 2. Redémarrez Home Assistant.
+
+> **Migration depuis l'ancien domaine `volets_manager` :** Home Assistant identifie une intégration par son domaine. Après ce renommage, supprimez l'ancienne intégration dans **Paramètres > Appareils et services**, retirez l'ancien dossier `custom_components/volets_manager`, installez la nouvelle version, puis ajoutez **Cover_Manager**. Les options de l'ancienne entrée devront être configurées à nouveau.
 
 ## Configuration
 
@@ -100,7 +102,7 @@ Les volets restent fermés la nuit ou sous `200 lx`, passent à l'ouverture lors
 logger:
   default: info
   logs:
-    custom_components.volets_manager: debug
+    custom_components.cover_manager: debug
 ```
 
 ## Compatibilité

@@ -2,22 +2,31 @@
 from __future__ import annotations
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
+from .coordinator import CoverManagerConfigEntry, CoverManagerCoordinator
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities([VoletsSwitch(hass.data[DOMAIN][entry.entry_id], entry)])
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: CoverManagerConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    async_add_entities([CoverManagerSwitch(entry.runtime_data, entry)])
 
 
-class VoletsSwitch(RestoreEntity, SwitchEntity):
+class CoverManagerSwitch(RestoreEntity, SwitchEntity):
     _attr_has_entity_name = True
     _attr_name = "Automatisme actif"
     _attr_icon = "mdi:window-shutter-auto"
 
-    def __init__(self, coordinator, entry):
+    def __init__(
+        self, coordinator: CoverManagerCoordinator, entry: CoverManagerConfigEntry
+    ) -> None:
         self._coordinator = coordinator
         self._attr_unique_id = f"{entry.entry_id}_enabled"
         self._attr_device_info = DeviceInfo(
