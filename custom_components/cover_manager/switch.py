@@ -1,6 +1,8 @@
 """Interrupteur d'activation de l'automatisme."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -9,6 +11,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN
 from .coordinator import CoverManagerConfigEntry, CoverManagerCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -41,10 +45,20 @@ class CoverManagerSwitch(RestoreEntity, SwitchEntity):
     async def async_added_to_hass(self) -> None:
         if (last := await self.async_get_last_state()) is not None:
             self._coordinator.enabled = last.state != "off"
+            _LOGGER.info(
+                "%s : état de l'automatisme restauré : %s",
+                self._coordinator.entry.title,
+                "actif" if self._coordinator.enabled else "en pause",
+            )
             await self._coordinator.async_request_refresh()
 
     async def _set(self, value: bool) -> None:
         # Réinitialiser les cibles permet de reprendre immédiatement après une pause.
+        if self._coordinator.enabled != value:
+            _LOGGER.info(
+                "%s : automatisme %s", self._coordinator.entry.title,
+                "activé" if value else "mis en pause",
+            )
         self._coordinator.enabled = value
         self._coordinator.reset_applied()  # resynchronise à la réactivation
         self.async_write_ha_state()

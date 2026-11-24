@@ -50,6 +50,7 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
         self._heat = False
         self._since: dict[str, datetime] = {}  # Début des périodes de condition soutenue.
         self._applied: dict[str, int] = {}  # Dernière cible demandée à chaque volet.
+        self._sensor_problems: dict[str, str] = {}
         self._unsub = None
 
     # ------------------------------------------------------------ config
@@ -72,6 +73,7 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
         ids = [i for i in ids if i]
         if ids:
             self._unsub = async_track_state_change_event(self.hass, ids, self._on_change)
+            _LOGGER.debug("%s : surveillance des capteurs %s", self.entry.title, ids)
 
     @callback
     def async_stop_listeners(self) -> None:
@@ -81,6 +83,10 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
 
     @callback
     def _on_change(self, _event) -> None:
+        _LOGGER.debug(
+            "%s : changement du capteur %s, réévaluation demandée",
+            self.entry.title, _event.data.get("entity_id"),
+        )
         self.hass.async_create_task(self.async_request_refresh())
 
     # ----------------------------------------------------------- helpers
@@ -90,11 +96,29 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
             return None
         st = self.hass.states.get(entity_id)
         if st is None or st.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            problem = "absent ou indisponible"
+            if self._sensor_problems.get(entity_id) != problem:
+                _LOGGER.warning(
+                    "%s : capteur %s %s ; sa mesure ne sera pas utilisée",
+                    self.entry.title, entity_id, problem,
+                )
+                self._sensor_problems[entity_id] = problem
             return None
         try:
-            return float(st.state)
+            value = float(st.state)
         except ValueError:
+            problem = "valeur non numérique"
+            if self._sensor_problems.get(entity_id) != problem:
+                _LOGGER.warning(
+                    "%s : capteur %s avec une valeur non numérique (%s) ; "
+                    "sa mesure ne sera pas utilisée",
+                    self.entry.title, entity_id, st.state,
+                )
+                self._sensor_problems[entity_id] = problem
             return None
+        if self._sensor_problems.pop(entity_id, None) is not None:
+            _LOGGER.info("%s : capteur %s à nouveau utilisable", self.entry.title, entity_id)
+        return value
 
     def _sustained(self, key: str, cond: bool, minutes: float, now: datetime) -> bool:
         """Vrai si `cond` est vraie depuis au moins `minutes` minutes.
@@ -138,6 +162,12 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
         # La lumière confirme les transitions jour/nuit après le délai configuré.
         lux = self._float(o.get(CONF_LUX_SENSOR))
         delay = o[CONF_LUX_DELAY]
+        _LOGGER.debug(
+            "%s : évaluation horaire=%s–%s, dans la plage=%s, "
+            "jour précédent=%s, luminosité=%s lx, seuils=%s/%s lx, délai=%s min",
+            self.entry.title, open_s, close_s, in_window, self._day, lux,
+            o[CONF_LUX_OPEN], o[CONF_LUX_CLOSE], delay,
+        )
 
         # --- Jour / nuit : horaires + luminosité (avec délai et hystérésis)
         reason = ""
@@ -189,6 +219,12 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
                 self._heat = temp >= o[CONF_HEAT_THRESHOLD] - HEAT_HYSTERESIS
             else:
                 self._heat = temp >= o[CONF_HEAT_THRESHOLD]
+            _LOGGER.debug(
+                "%s : température=%s °C, seuil chaleur=%s °C, chaleur active=%s, "
+                "azimut=%s°, élévation=%s°, façade ensoleillée=%s",
+                self.entry.title, temp, o[CONF_HEAT_THRESHOLD], self._heat,
+                az, el, sunny,
+            )
             # Cette position remplace la position jour normale (100 %) uniquement
             # lorsque toutes les conditions thermiques ci-dessus sont réunies.
             if self._heat and sunny:
@@ -196,6 +232,11 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
                     int(o[CONF_HEAT_POSITION]), RULE_HEAT,
                     f"{temp:.1f} °C, soleil sur la façade (az {az:.0f}°, élév. {el:.0f}°)",
                 )
+        else:
+            _LOGGER.debug(
+                "%s : règle chaleur non évaluée (température=%s, sun.sun présent=%s)",
+                self.entry.title, temp, sun is not None,
+            )
         # Aucun déclenchement thermique : les volets suivent la règle normale du jour.
         return 100, RULE_DAY, reason
 
@@ -204,6 +245,7 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
         """Exécute une évaluation complète puis retourne son résultat au sensor."""
         # Retourner None comme cible conserve les volets dans leur position actuelle.
         if not self.enabled:
+            _LOGGER.debug("%s : automatisme en pause, aucun ordre", self.entry.title)
             return {"target": None, "rule": RULE_PAUSED, "reason": "automatisme en pause",
                     "blocked_by": []}
 
@@ -211,6 +253,15 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
         target, rule, reason = self._evaluate()
         # 2. Vérification des protections physiques avant chaque fermeture.
         blocked_by = self._windows_open()
+        if not self.data or (self.data["rule"], self.data["target"]) != (rule, target):
+            _LOGGER.info(
+                "%s : règle %s, cible %s %% (%s)",
+                self.entry.title, rule, target, reason,
+            )
+        _LOGGER.debug(
+            "%s : décision règle=%s, cible=%s %%, raison=%s, ouvertures=%s",
+            self.entry.title, rule, target, reason, blocked_by,
+        )
         await self._apply(target, blocked_by)
         return {"target": target, "rule": rule, "reason": reason, "blocked_by": blocked_by}
 
@@ -220,9 +271,14 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
         # reste donc respecté jusqu'au prochain changement de règle.
         for eid in self.covers:
             if self._applied.get(eid) == target:
+                _LOGGER.debug("%s : cible %s %% déjà mémorisée, aucun ordre", eid, target)
                 continue
             st = self.hass.states.get(eid)
             if st is None or st.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                _LOGGER.debug(
+                    "%s : volet absent ou indisponible, cible %s %% non appliquée",
+                    eid, target,
+                )
                 continue
 
             current = st.attributes.get("current_position")
@@ -237,17 +293,22 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
                     )
                 )
             ):
+                _LOGGER.debug("%s : déjà à la cible %s %%, aucun ordre", eid, target)
                 self._applied[eid] = target
                 continue
 
             # Position inconnue : approximation utilisée pour la sécurité.
             if current is None:
                 current = 0 if st.state == "closed" else 100
+                _LOGGER.debug("%s : position inconnue, estimation à %s %%", eid, current)
 
             # Sécurité : jamais de fermeture si une ouverture est ouverte.
             # On ne mémorise pas la cible -> nouvelle tentative à la fermeture de la porte.
             if windows_open and target < current:
-                _LOGGER.debug("%s : fermeture bloquée (%s ouverte)", eid, windows_open)
+                _LOGGER.debug(
+                    "%s : fermeture de %s %% à %s %% bloquée par %s",
+                    eid, current, target, windows_open,
+                )
                 continue
 
             features = st.attributes.get("supported_features", 0)
@@ -256,10 +317,13 @@ class CoverManagerCoordinator(DataUpdateCoordinator[CoordinatorData]):
                     "cover", "set_cover_position",
                     {"entity_id": eid, "position": target}, blocking=False,
                 )
+                _LOGGER.info("%s : position %s %% demandée", eid, target)
             elif target <= 0:
                 await self.hass.services.async_call("cover", "close_cover", {"entity_id": eid})
+                _LOGGER.info("%s : fermeture demandée", eid)
             elif target >= 100:
                 await self.hass.services.async_call("cover", "open_cover", {"entity_id": eid})
+                _LOGGER.info("%s : ouverture demandée", eid)
             else:
                 _LOGGER.warning("%s ne gère pas la position : %s %% ignoré", eid, target)
             self._applied[eid] = target

@@ -155,7 +155,8 @@ Le capteur expose les attributs suivants :
 - Vérifiez que les entités de capteur utilisent des états numériques.
 - Vérifiez que les entités `cover` prennent en charge l'ouverture/fermeture ou la position.
 - Si une fermeture est bloquée, contrôlez les entités sélectionnées dans **Capteurs d'ouverture**.
-- Activez les journaux Home Assistant pour voir les décisions et blocages détaillés :
+- Les journaux `info` indiquent les changements de règle, les demandes envoyées aux volets et l'activation ou la pause de l'automatisme. Les avertissements signalent notamment les capteurs configurés inutilisables et les positions non prises en charge. Une demande enregistrée ne garantit pas que le volet a terminé son déplacement.
+- Activez le niveau `debug` pour voir chaque évaluation, les mesures, les ordres ignorés et les fermetures bloquées :
 
 ```yaml
 logger:
