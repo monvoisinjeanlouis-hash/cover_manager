@@ -1,7 +1,7 @@
 {
   "domain": "cover_manager",
   "name": "Cover_Manager",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "documentation": "https://github.com/monvoisinjeanlouis-hash/cover_manager",
   "issue_tracker": "https://github.com/monvoisinjeanlouis-hash/cover_manager/issues",
   "codeowners": ["@monvoisinjeanlouis-hash"],
